@@ -5,6 +5,7 @@ Author: Zhening Huang (zh340@cam.ac.uk)
 """
 
 import torch
+import open3d as o3d
 from openins3d.lookup import *
 from openins3d.snap import *
 from openins3d.build_lookup_dict import *
@@ -94,6 +95,13 @@ if __name__ == "__main__":
         scan_pc = torch.from_numpy(np.hstack([xyz, rgb]))
         adjust_camera = [10, 2, 0.6]
         image_generation_pcd(scan_pc, height, width, scene_id, snap_save_path, adjust_camera=adjust_camera)
+    elif args.dataset == "cvpr2024":
+        adjust_camera = [5, 0.1, 0.3] # TODO: maybe needs to be changed?
+        pcd = o3d.io.read_point_cloud(pointcloud_file)
+        xyz = np.array(pcd.points)
+        rgb = np.array(pcd.colors)
+        scan_pc = torch.from_numpy(np.hstack([xyz, rgb], dtype=np.float32))
+        image_generation_pcd(scan_pc, height, width, scene_id, snap_save_path, adjust_camera=adjust_camera)
     print("mask:")
     # mask module
     if args.dataset in ["scannet", "replica", "mattarport3d"]:
@@ -106,6 +114,15 @@ if __name__ == "__main__":
         pcd = np.load(pointcloud_file)
         xyz, rgb = pcd[:,:3], pcd[:,3:6]
         scan_pc = torch.from_numpy(np.hstack([xyz, rgb]))
+        data, _, _, features, _, inverse_map = prepare_data_pcd(xyz, rgb, device)
+        with torch.no_grad():
+            outputs = model(data, raw_coordinates=features)
+        binary_mask = map_output_to_pointcloud(scan_pc, outputs, inverse_map, confidence_threshold = 0.8)
+    elif args.dataset == "cvpr2024":
+        pcd = o3d.io.read_point_cloud(pointcloud_file)
+        xyz = np.array(pcd.points)
+        rgb = np.array(pcd.colors)
+        scan_pc = torch.from_numpy(np.hstack([xyz, rgb], dtype=np.float32))
         data, _, _, features, _, inverse_map = prepare_data_pcd(xyz, rgb, device)
         with torch.no_grad():
             outputs = model(data, raw_coordinates=features)
