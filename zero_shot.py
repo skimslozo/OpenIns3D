@@ -99,7 +99,7 @@ if __name__ == "__main__":
         adjust_camera = [0, 0.0, 0.3] # TODO: maybe needs to be changed?
         pcd = o3d.io.read_point_cloud(pointcloud_file)
         xyz = np.array(pcd.points)
-        rgb = np.array(pcd.colors)
+        rgb = np.array(pcd.colors)*255 # normalized -> full RGB
         scan_pc = torch.from_numpy(np.hstack([xyz, rgb], dtype=np.float32))
         image_generation_pcd(scan_pc, height, width, scene_id, snap_save_path, adjust_camera=adjust_camera)
     print("mask:")
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     elif args.dataset == "cvpr2024":
         pcd = o3d.io.read_point_cloud(pointcloud_file)
         xyz = np.array(pcd.points)
-        rgb = np.array(pcd.colors)
+        rgb = np.array(pcd.colors)*255 # normalized -> full RGB
         scan_pc = torch.from_numpy(np.hstack([xyz, rgb], dtype=np.float32))
         data, _, _, features, _, inverse_map = prepare_data_pcd(xyz, rgb, device)
         with torch.no_grad():
