@@ -96,7 +96,7 @@ if __name__ == "__main__":
         adjust_camera = [10, 2, 0.6]
         image_generation_pcd(scan_pc, height, width, scene_id, snap_save_path, adjust_camera=adjust_camera)
     elif args.dataset == "cvpr2024":
-        adjust_camera = [5, 0.1, 0.3] # TODO: maybe needs to be changed?
+        adjust_camera = [0, 0.0, 0.3] # TODO: maybe needs to be changed?
         pcd = o3d.io.read_point_cloud(pointcloud_file)
         xyz = np.array(pcd.points)
         rgb = np.array(pcd.colors)

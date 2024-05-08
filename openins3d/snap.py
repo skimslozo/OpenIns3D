@@ -192,6 +192,31 @@ def generate_camera_locations(center, width, length, height, num_split=5):
         camera_pos_from.append([top_coord[-1], y_coord, top_height])
     return camera_pos_from
 
+def generate_camera_locations_2(center, height, radius, num_points=16):
+    """
+    Generates evenly distributed points on a circle in 3D space.
+
+    Parameters:
+    center (tuple): The (x, y, z) coordinates of the center point.
+    height (float): The height at which the circle is to be placed, relative to the z-coordinate of the center.
+    radius (float): The radius of the circle.
+    num_points (int): The number of points to generate on the circle.
+
+    Returns:
+    list: A list of [x, y, z] lists representing the points on the circle.
+    """
+    x0, y0, z0 = center
+    z = z0 + height  # The z-coordinate of all points is offset by the height
+    angles = np.linspace(0, 2 * np.pi, num_points, endpoint=False)  # Generate evenly spaced angles
+    
+    points = []
+    for angle in angles:
+        x = (x0 + radius * np.cos(angle)).astype(np.float32)  # x coordinate
+        y = (y0 + radius * np.sin(angle)).astype(np.float32)  # y coordinate
+        points.append([x, y, z])
+    
+    return points
+
 def render_mesh(pose, intrin_path, image_width, image_height, mesh, name):
     """
     Given the mesh in PyTorch3D format, render images with a defined pose, intrinsic matrix, and image dimensions
@@ -310,7 +335,7 @@ def render_with_results(pose, intrin_path, image_width, image_height, scan_pc, m
     color = rendered_image[..., :3]
     color_image = Image.fromarray((color).astype(np.uint8))
     
-    font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 25, encoding="unic")
+    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 25, encoding="unic")
     draw = ImageDraw.Draw(color_image)  
     
     location = []
@@ -391,6 +416,10 @@ def image_generation_pcd(scan_pc, image_width, image_height, scene_name, folder_
     
     lift_cam, zoomout, remove_lip = adjust_camera
     
+    # get geometric mean of the scene
+    scene_mean = scan_pc[:, :3].mean(axis=0).numpy().squeeze()
+    scene_mean_np = tuple(np.copy(scene_mean).astype(np.float32).squeeze())
+
     # get rid of lip
     z_max = scan_pc[:, 2].max()
     idx_remained = scan_pc[:, 2] <= (z_max - remove_lip)
@@ -400,13 +429,14 @@ def image_generation_pcd(scan_pc, image_width, image_height, scene_name, folder_
     scene_center = np.array([scan_pc[:, 0].max() - w / 2, scan_pc[:, 1].max() - l / 2, scan_pc[:, 2].max() - h / 2,])
     zoom_factor = 1 + zoomout
     w, l, h = w * zoom_factor, l * zoom_factor, h * zoom_factor
-    camera_locations = generate_camera_locations(scene_center, w, l, h, 5)
+    # camera_locations = generate_camera_locations(scene_center, w, l, h, 5)
+    camera_locations = generate_camera_locations_2(scene_mean_np, z_max.numpy().max(), num_points=16, radius=1)
 
     for i in tqdm(range(len(camera_locations))):
         camera_location = camera_locations[i]
         org_camera_pos = copy.deepcopy(camera_location)
         camera_location[-1] = org_camera_pos[-1] + lift_cam  # lift the camera
-        target_location = scene_center
+        target_location = scene_mean
         up_vector = np.array([0, 0, -1])
         pose_matrix = lookat(camera_location, target_location, up_vector)
         pose_matrix_calibrated = np.transpose(np.linalg.inv(np.transpose(pose_matrix)))
