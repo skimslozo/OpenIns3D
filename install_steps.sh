@@ -30,3 +30,4 @@ cd ODISE
 pip install -e . #(or also try python -m pip install -e .)
 cd ..
 pip install torch_scatter gdown==v4.6.3 loguru open3d plyfile pyviz3d python-dotenv omegaconf==2.1.1 iopath==0.1.8
+pip install chardet
